@@ -91,7 +91,7 @@ print(max_pixel)
 def activation(x):
     if x < 0.05:
         return 0
-    return x ** 0.5
+    return x ** 0.1
     # return 0
     # return 1 / (1 + math.exp(-22*(x-0.75)))
 
@@ -116,26 +116,28 @@ import numpy as np
 
 # calculate the duration of the sound
 sample_rate = 8000 # 44100  # Hz
-beat_length = 0.5 # seconds
-interval = 0.2 # seconds
+beat_length = 0.2 # seconds
+interval = 0.0 # seconds
 print()
 
 # resize to height 8
-image_copy = image_copy.resize((image_copy.size[0], 8))
+image_copy = image_copy.resize((image_copy.size[0], 4))
 pixels_copy = image_copy.load()
 width, height = image_copy.size
+
+all_samples = np.zeros(0)
 
 # i = 0
 # t = np.linspace(0, 1, 1 * sample_rate, False)
 
-center_freq = 440
+center_freq = 440/2
 
 # print("magnitude2 max", np.max(magnitude2))
 # exit(2)
 for x in range(width):
     samples = np.zeros(round(sample_rate * beat_length))
     t = np.arange(samples.size) / sample_rate
-    for y in range(height):
+    for y in range(height // 2):
         # sound
         # get the pixel value at (x, y)
         pixel = pixels_copy[x, y]
@@ -152,16 +154,52 @@ for x in range(width):
         # frequency is the distance from the origin
         # freq = ((x-width/2)**2 + (y-height/2)**2)**0.5 * 30
 
-        freq = 440 * 2 ** ((y - height/2)/8)
+        freq = center_freq * 2 ** ((y - height/2)/8)
         mag = ((pixel[0]**2 + pixel[1]**2 + pixel[2]**2) / (255**2) / 3) ** 0.5
 
         print(freq, mag, activation(mag))
 
         np.add(samples, activation(mag)*waveform(t * 2 * math.pi * freq), out=samples, casting="unsafe")
+    
+    all_samples = np.append(all_samples, samples)
 
-    samples *= 32767 / max(abs(samples))
-    samples = samples.astype(np.int16)
-    play_obj = sa.play_buffer(samples, 1, 2, sample_rate)
-    play_obj.wait_done()
-    # wait for interval
-    time.sleep(interval)
+    samples = np.zeros(round(sample_rate * beat_length))
+    t = np.arange(samples.size) / sample_rate
+
+    for y in range(height // 2, height):
+        # sound
+        # get the pixel value at (x, y)
+        pixel = pixels_copy[x, y]
+        # m = magnitude2[y, x]
+        # p = phase[y, x]
+        # print(p)
+        # samples[i] = math.sin(i/sample_rate * 2 * math.pi * 293.665 * (1 + 0* p/2))
+        # samples[i] += math.sin(i/sample_rate * 2 * math.pi * 440 * (1 + 0* p/2))
+        # samples[i] += math.sin(i/sample_rate * 2 * math.pi * 1000 * (1 + 0* p/2))
+        # add this phase to the full sound
+        # print(p**0.5)
+        # freq = wavy_x(1 - ((x-width/2)**2 + (y-height/2)**2)/((width**2 + height**2)/4)) * 440
+
+        # frequency is the distance from the origin
+        # freq = ((x-width/2)**2 + (y-height/2)**2)**0.5 * 30
+
+        freq = center_freq * 2 ** ((y - height/2)/8)
+        mag = ((pixel[0]**2 + pixel[1]**2 + pixel[2]**2) / (255**2) / 3) ** 0.5
+
+        print(freq, mag, activation(mag))
+
+        np.add(samples, activation(mag)*waveform(t * 2 * math.pi * freq), out=samples, casting="unsafe")
+    all_samples = np.append(all_samples, samples)
+    
+
+    # samples *= 32767 / max(abs(samples))
+    # samples = samples.astype(np.int16)
+    # play_obj = sa.play_buffer(samples, 1, 2, sample_rate)
+    # play_obj.wait_done()
+    # # wait for interval
+    # time.sleep(interval)
+
+all_samples *= 32767 / max(abs(all_samples))
+all_samples = all_samples.astype(np.int16)
+play_obj = sa.play_buffer(all_samples, 1, 2, sample_rate)
+play_obj.wait_done()
